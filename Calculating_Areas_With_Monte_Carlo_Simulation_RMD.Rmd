@@ -1,0 +1,292 @@
+
+---
+title: "Calculating Areas With Monte Carlo Simulation"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## q.a
+```{r, echo = FALSE, results = 'hide', warning=FALSE, message=FALSE}
+library(plotly)
+
+options(scipen=999)
+```
+
+```{r cars}
+lcg_func = function(x_seed = 1,
+                    n = 10 ,
+                    m = 9 ,
+                    a = 2 ,
+                    c = 0)
+{
+  if (n <= 0 || round(n) != n)
+  {
+    print('n, the length result vecotr,  must be positive integer')
+  }
+  else{
+    results = c
+    for (i in 1:(n - 1)) {
+      x_seed = (a * x_seed + c) %% m
+      results = c(results, x_seed)
+    }
+    return(results /  (m - 1))
+  }
+}
+
+
+lcg_vec = lcg_func(
+  x_seed = 1,
+  n = 10 ,
+  m = 9 ,
+  a = 2 ,
+  c = 0
+)
+length(lcg_vec)
+summary(lcg_vec)
+```
+
+
+## q.b
+
+It seems that the samples didnt belong to uniform distribution.
+It is very easy to see that the density goes higher as the coordinate get closer to zero (colored area vs white area)
+
+
+```{r  }
+id_num = 207438573
+lcg_vec = lcg_func(
+  x_seed = id_num ,
+  n = 2000 ,
+  m = 2 ^ 31,
+  a = 2 ^ 16 + 3,
+  c = 0
+)
+
+X0 = lcg_vec[seq(1, 1999, 2)] ^ 2
+X1 = lcg_vec[seq(2, 2000, 2)] ^ 2
+
+plot(
+  X0,
+  X1,
+  pch = 19,
+  lwd = 0.9,
+  cex = 0.5,
+  col = "#00AFBB",
+  main = "Sequence Of Pairs Plot",
+  xlab = "X axis",
+  ylab = "Y axis",
+)
+coordinate = seq(0, 1, 0.1)
+
+for (i in coordinate) {
+  abline(v = i, col = "black")
+  abline(h = i, col = "black")
+  
+}
+```
+
+
+## q.c
+
+The following code creating grid which represent all the small squeres and the number of points.
+Each index in 'observed_vector' represent squer and each number represent number of points within the squer.
+
+```{r  }
+
+
+grd = Map(c, coordinate[1:10], coordinate[2:11])
+
+observed_vector = c()
+for (i in grd) {
+  for (j in grd) {
+    number_of_sampels_inside = sum((X0 > i[1] &  X0 < i[2])  &
+                                     (X1 > j[1] & X1 < j[2]))
+    observed_vector = c(observed_vector, number_of_sampels_inside)
+  }
+}
+
+
+```
+
+
+Since the vector count from the left lower squer its easy to see that the more we get farther (right upper) the lower of point number in the cells.
+
+Since under H0 we assumed that the data taken from uniform distribution.
+The excepted number of samples in each cell should be 1000/100 = 10 = excepted value.
+
+Chi squer test - Lets claculate,S, the chi statistic.
+
+```{r  }
+S = sum((observed_vector - 10) ^ 2 / 10)
+round(pchisq(S, df = (100 - 1) * (2 - 1) , lower.tail = FALSE), 3)
+```
+
+
+I'll confidently  reject the null hypotesis.
+The p_value is pretty close to 0 which mean the results we got are pretty rare under H0.
+We can see also that the  S-statistic value is far from 0 which mean that the diff between the observed and expected value is high.
+
+##q.d
+
+```{r  }
+n_iter = 10 ^ 4
+n_points = 10 ^ 3
+
+S_vec = c()
+for (i in 1:n_iter) {
+  # samplimg 1000 points from uniform distribution
+  X0 = runif(n_points, 0, 1)
+  X1 = runif(n_points, 0, 1)
+  uni_vector = c()
+  for (i in grd) {
+    for (j in grd) {
+      number_of_sampels_inside = sum((X0 > i[1] &  X0 < i[2])  &
+                                       (X1 > j[1] & X1 < j[2]))
+      uni_vector = c(uni_vector, number_of_sampels_inside)
+    }
+  }
+  
+  # calculating S statistic for each expected uniform sample and observed LCG function sample
+  S_current = sum((uni_vector - 10) ^ 2 / 10)
+  S_vec = c(S_vec, S_current)
+  
+}
+
+rchisq_sampel = rchisq(10000, 100 - 1)
+
+plot(density(S_vec) ,
+     main = "Empirical density",
+     xlab = "Values",
+     ylab = "density")
+
+plot(
+  density(rchisq_sampel),
+  main = "Theoretical density",
+  xlab = "Values",
+  ylab = "density"
+)
+``` 
+
+
+The densities looks preaty the same, positive and simetrical aroound 100
+
+Caculating empirical p_value
+
+```{r  }
+sum(S_vec > S) / length(S_vec)
+``` 
+
+
+yes the p value are the same, 0 and close to 0
+
+
+
+## q.e 
+
+Generating sequence of length 3000
+
+```{r  }
+id_num = 207438573
+lcg_vec = lcg_func(
+  x_seed = id_num ,
+  n = 3000 ,
+  m = 2 ^ 31,
+  a = 2 ^ 16 + 3,
+  c = 0
+)
+```
+
+Generating points (x_i,y_i,z_i)
+
+```{r  }
+X0 = lcg_vec[seq(1, 1999, 2)] ^ 2
+X1 = lcg_vec[seq(2, 2000, 2)] ^ 2
+X2 = lcg_vec[seq(3, 2001, 2)] ^ 2
+```
+
+plot
+
+```{r  }
+
+df = data.frame(X0, X1, X2)
+fig <-
+  plot_ly(
+    df,
+    x = ~ X0,
+    y = ~ X1,
+    z = ~ X2,
+    colors = c('#0C4B8E'),
+    size = 1
+  )
+fig <- fig %>% layout(title = "dynamic 3d Scatter Plot of LCG threes sequence",
+                      scene = list(
+                        xaxis = list(title = "X"),
+                        yaxis = list(title = "Y"),
+                        zaxis = list(title = "Z")
+                      ))
+fig <- fig %>% add_markers()
+fig
+```
+
+
+My conclusion is that the same as happend in the previouse is now hapenning here. the LCG algorithem do not create real random sequence for the given parameters.And as more as the points get closer to 0 as higher as the density goes up, which point out of correlations between the points in the consecutive sequence
+
+
+## q.f
+The reasone for the poor performence of the LCG with the given params is that there is exist correlation
+between the threes 
+By using recursive relation we can show that $i_z = 6_{iy} - 9_{ix}(mod(2^{31}))$ the last  is a multiple of $2^{32}$ and so, dividing by $2^{31}$ to get a float, we find that $9x − 6y + z$ is an integer. In fact, this integer is restricted to some limits
+
+
+I order to break these non uniform distribution lets intiat the LCG with different params that not create correlation. Then rerun the chi test for the new points and take a look over the p_value
+
+
+
+```{r  }
+lcg_vec = lcg_func(
+  x_seed = id_num ,
+  n = 2000 ,
+  m = 2 ^ 31,
+  a = 33,
+  c = 58
+)
+
+```
+
+Generating points (x_i,y_i,z_i)
+
+```{r  }
+X0 = lcg_vec[seq(1, 2000, 2)]
+X1 = lcg_vec[seq(2, 2001, 2)]
+
+coordinate = seq(0, 1, 0.1)
+grd = Map(c, coordinate[1:10], coordinate[2:11])
+
+observed_vector = c()
+for (i in grd) {
+  for (j in grd) {
+    number_of_sampels_inside = sum((X0 > i[1] &  X0 < i[2])  &
+                                     (X1 > j[1] & X1 < j[2]))
+    observed_vector = c(observed_vector, number_of_sampels_inside)
+  }
+}
+
+
+S = sum((observed_vector - 10) ^ 2 / 10)
+round(pchisq(S, df = (100 - 1) * (2 - 1) , lower.tail = FALSE), 3)
+```
+
+
+The P_value is fare from 0 (as good practice its bigger then 0.05) so the null hypotesis of uniform distribution still stand
+
+
+
+
+
+
