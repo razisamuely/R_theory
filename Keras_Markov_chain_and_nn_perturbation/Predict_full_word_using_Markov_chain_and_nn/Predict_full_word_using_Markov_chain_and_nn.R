@@ -1,9 +1,17 @@
 #install.packages("keras")
 #install.packages('R.matlab')
 
+# Download the dataset from EMNIST website: https://www.nist.gov/itl/products-and-services/emnist-dataset
+# Scroll down and click on ‘Matlab format dataset’
+# ‘Matlab.zip’ will get downloaded. Unzip it and you will find 6 MS Access datasets. 
+#     We are using ‘emnist-byclass’ dataset for this task because it has all the characters
+# Read this dataset in R the first time by using ‘R.matlab’ library
+# Save the dataset in R format (Rdata) after you load it for later use
+
+
 library(keras)
 library(R.matlab)
-library(rstudioapi)
+library(rstudioapi) 
 
 # Set work directory to current R code document path 
 current_path = rstudioapi::getActiveDocumentContext()$path 
